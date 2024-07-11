@@ -1,12 +1,19 @@
 import time
+from contextlib import contextmanager
+import inspect
+
+from beacon.adict import ADict
 
 
 class Metric:
-    def __init__(self):
+    def __init__(self, max_size=None):
         self.values = []
+        self.max_size = max_size
 
     def add(self, value):
         self.values.append(value)
+        if self.max_size is not None and len(self.values) > self.max_size:
+            self.values.pop(0)
 
     def mean(self, num_values=None):
         values = self.values
@@ -32,12 +39,33 @@ class Metric:
         return f'{self.value():.3f}({self.mean():.3f})'
 
 
+class MetricGroup:
+    def __init__(self, max_size=None):
+        self.metrics = ADict(default=Metric(max_size=max_size))
+
+
+@contextmanager
+def capture(metric_group, *var_names):
+    yield
+    frame = inspect.currentframe().f_back.f_back
+    local_vars = frame.f_locals
+    for var_name in var_names:
+        if var_name in local_vars:
+            metric_group.metrics[var_name].add(local_vars[var_name])
+
+
 class Timer:
-    def __init__(self):
-        self.metric = Metric()
+    def __init__(self, max_size=None):
+        self.metric = Metric(max_size=max_size)
         self.start = None
 
-    def add(self):
+    @contextmanager
+    def time_check(self):
+        self.add()
+        yield
+        self.add(finish=True)
+
+    def add(self, finish=False):
         end = time.time()
         if self.metric.value():
             self.metric.add(end-self.sum()-self.start)
@@ -45,6 +73,8 @@ class Timer:
             self.start = end
         else:
             self.metric.add(end-self.start)
+        if finish:
+            self.finish()
 
     def mean(self):
         return self.metric.mean()
@@ -55,12 +85,16 @@ class Timer:
     def value(self):
         return self.metric.value()
 
+    def finish(self):
+        self.start = None
+
     def reset(self):
         self.metric.reset()
+        self.start = None
 
-    def eta(self, max_iters, as_string=False):
+    def eta(self, num_iters, as_string=False):
         if self.mean():
-            eta = int(self.mean()*max_iters)
+            eta = int(self.mean()*num_iters)
             if as_string:
                 days = eta//86400
                 eta -= days*86400
@@ -72,3 +106,5 @@ class Timer:
                 return f'{days}D {hours:02d}:{minutes:02d}:{seconds:02d}'
             else:
                 return eta
+
+
