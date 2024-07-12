@@ -2,8 +2,6 @@ import time
 from contextlib import contextmanager
 import inspect
 
-from beacon.adict import ADict
-
 
 class Metric:
     def __init__(self, max_size=None):
@@ -39,11 +37,6 @@ class Metric:
         return f'{self.value():.3f}({self.mean():.3f})'
 
 
-class MetricGroup:
-    def __init__(self, max_size=None):
-        self.metrics = ADict(default=Metric(max_size=max_size))
-
-
 @contextmanager
 def capture(metric_group, *var_names):
     yield
@@ -51,7 +44,7 @@ def capture(metric_group, *var_names):
     local_vars = frame.f_locals
     for var_name in var_names:
         if var_name in local_vars:
-            metric_group.metrics[var_name].add(local_vars[var_name])
+            metric_group[var_name].add(local_vars[var_name])
 
 
 class Timer:

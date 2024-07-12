@@ -1,6 +1,4 @@
-from beacon.adict import ADict
-
-from tuls.metric.logger.base import Metric, MetricGroup
+from tuls.metric.logger.base import Metric
 import torch
 import torch.distributed as dist
 
@@ -18,7 +16,4 @@ class DistMetric(Metric):
         self.values.append(value.item())
 
 
-class DistMetricGroup:
-    def __init__(self, max_size=None):
-        self.metrics = ADict(default=DistMetric(max_size=max_size))
 

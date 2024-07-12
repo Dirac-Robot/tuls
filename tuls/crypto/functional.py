@@ -4,7 +4,7 @@ from cryptography.fernet import Fernet
 
 
 def encrypt_text(text, key=None):
-    key = Fernet.generate_key()
+    key = key or Fernet.generate_key()
     fernet = Fernet(key)
     if isinstance(text, str):
         text = text.encode('utf-8')
