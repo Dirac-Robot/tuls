@@ -60,13 +60,3 @@ def auto_crypt(*var_names, key=None):
         if var_name in local_vars:
             local_vars[var_name] = auto_encrypt(local_vars[var_name], key).result
 
-
-if __name__ == '__main__':
-    encrypted = auto_encrypt('/Users/a13078/Documents/이비.png')
-    my_key = encrypted.key
-    my_value = encrypted.result
-    print(my_value)
-    with auto_crypt('my_value', key=my_key):
-        print(my_value)
-    print(my_value)
-
