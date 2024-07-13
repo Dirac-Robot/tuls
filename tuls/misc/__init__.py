@@ -1,16 +1,19 @@
+import importlib.util as iu
 import random
 
-import numpy as np
-import torch
-from torch.backends import cudnn
+if numpy_exists := iu.find_spec('numpy'):
+    import numpy as np
+if torch_exists := iu.find_spec('torch'):
+    import torch
+    from torch.backends import cudnn
 
 
 class Deterministic:
     def __init__(self, seed=None):
         self.seed = seed
-        self.torch_state = None
-        self.numpy_state = None
         self.python_state = None
+        self.numpy_state = None
+        self.torch_state = None
         self.cuda_state = None
         self.cuda_state_all = None
 
@@ -22,20 +25,24 @@ class Deterministic:
         self.restore()
 
     def save_state(self):
-        self.torch_state = torch.get_rng_state()
-        self.numpy_state = np.random.get_state()
         self.python_state = random.getstate()
-        self.cuda_state = torch.cuda.get_rng_state()
-        self.cuda_state_all = torch.cuda.get_rng_state_all()
+        if numpy_exists:
+            self.numpy_state = np.random.get_state()
+        if torch_exists:
+            self.torch_state = torch.get_rng_state()
+            self.cuda_state = torch.cuda.get_rng_state()
+            self.cuda_state_all = torch.cuda.get_rng_state_all()
 
     def fix(self):
         if self.seed is not None:
-            cudnn.deterministic = True
-            torch.manual_seed(self.seed)
-            np.random.seed(self.seed)
             random.seed(self.seed)
-            torch.cuda.manual_seed(self.seed)
-            torch.cuda.manual_seed_all(self.seed)
+            if numpy_exists:
+                np.random.seed(self.seed)
+            if torch_exists:
+                torch.manual_seed(self.seed)
+                torch.cuda.manual_seed(self.seed)
+                torch.cuda.manual_seed_all(self.seed)
+                cudnn.deterministic = True
 
     def apply(self):
         self.save_state()
@@ -47,9 +54,11 @@ class Deterministic:
 
     def restore(self):
         if self.seed is not None:
-            cudnn.deterministic = False
-            torch.set_rng_state(self.torch_state)
-            np.random.set_state(self.numpy_state)
             random.setstate(self.python_state)
-            torch.cuda.set_rng_state(self.cuda_state)
-            torch.cuda.set_rng_state_all(self.cuda_state_all)
+            if numpy_exists:
+                np.random.set_state(self.numpy_state)
+            if torch_exists:
+                torch.set_rng_state(self.torch_state)
+                torch.cuda.set_rng_state(self.cuda_state)
+                torch.cuda.set_rng_state_all(self.cuda_state_all)
+                cudnn.deterministic = False
