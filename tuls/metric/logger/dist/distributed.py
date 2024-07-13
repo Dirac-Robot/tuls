@@ -1,4 +1,4 @@
-from tuls.metric.logger.base import Metric
+from tuls.metric.logger import Metric
 import torch
 import torch.distributed as dist
 

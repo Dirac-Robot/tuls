@@ -8,20 +8,20 @@ from beacon.adict import ADict, mutate_attribute
 
 
 class Registry(ADict):
-    def to_repr_dict(self):
+    def to_repr_dict(self, convert_fn=repr):
         repr_dict = self.clone()
         for key, value in repr_dict.items():
-            repr_dict[key] = self._to_repr(value)
+            repr_dict[key] = self._to_repr(value, convert_fn=convert_fn)
         return repr_dict.to_dict()
 
     @classmethod
-    def _to_repr(cls, value):
+    def _to_repr(cls, value, convert_fn=repr):
         if isinstance(value, Sequence):
             return [cls._to_repr(item) for item in value]
         elif isinstance(value, cls):
             return value.to_repr_dict()
         else:
-            return value if isinstance(value, str) else repr(value)
+            return value if isinstance(value, str) else convert_fn(value)
 
     @mutate_attribute
     def json(self):
