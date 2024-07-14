@@ -1,5 +1,7 @@
 import importlib.util as iu
+import os
 import random
+from contextlib import contextmanager
 
 if numpy_exists := iu.find_spec('numpy'):
     import numpy as np
@@ -62,3 +64,10 @@ class Deterministic:
                 torch.cuda.set_rng_state(self.cuda_state)
                 torch.cuda.set_rng_state_all(self.cuda_state_all)
                 cudnn.deterministic = False
+
+
+@contextmanager
+def fast_write(path, mode='w'):
+    os.makedirs(os.path.dirname(path), exist_ok=True)
+    with open(path, mode) as f:
+        yield f
