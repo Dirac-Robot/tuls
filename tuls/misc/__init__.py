@@ -71,3 +71,8 @@ def fast_write(path, mode='w'):
     os.makedirs(os.path.dirname(path), exist_ok=True)
     with open(path, mode) as f:
         yield f
+
+
+def reversed_enumerate(iterable):
+    for i in reversed(range(len(iterable))):
+        yield i, iterable[i]
