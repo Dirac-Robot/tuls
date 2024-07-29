@@ -73,6 +73,6 @@ def fast_write(path, mode='w'):
         yield f
 
 
-def reversed_enumerate(iterable):
+def renum(iterable):
     for i in reversed(range(len(iterable))):
         yield i, iterable[i]
