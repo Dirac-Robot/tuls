@@ -15,9 +15,9 @@ from tuls.debug.stack_logger import StackLogger
 def replace_iterable_repr(value):
     if isinstance(value, Iterable):
         if hasattr(value, '__len__'):
-            return f'<iterable {type(value)}, {len(value)} items>'
+            return f'{value.__class__.__name__}({len(value)} items)'
         else:
-            return f'<iterable {type(value)}>'
+            return f'{value.__class__.__name__}'
     return value
 
 
@@ -25,11 +25,95 @@ class TraceStatus:
     IN_TRACE = False
 
 
+class KeyBindingRegistry:
+    EVENT_KEYS = ADict(
+        ESCAPE=ADict(
+            key='s-up',
+            help='Return to main menu.'
+        ),
+        HELP=ADict(
+            key='c-h',
+            help='Print key bindings and their functions.'
+        ),
+        SOURCE=ADict(
+            key='c-s',
+            help='Print source code of selected frame or variable it it exists.'
+        ),
+        SEARCH=ADict(
+            key='c-f',
+            help='Search text from code of selected frame or variable if its source code exists.'
+        ),
+        INSPECT=ADict(
+            key='c-v',
+            help='Inspect variables defined in current frame.'
+        ),
+        EXEC=ADict(
+            key='c-x',
+            help='Execute commands on current frame.'
+        ),
+        ATTRIBUTES=ADict(
+            key='c-t',
+            help='Show attributes of selected variable if they exist.'
+        ),
+        METHODS=ADict(
+            key='c-e',
+            help='Show methods of selected variable if they exist.'
+        ),
+        TRACE_FORWARD=ADict(
+            key='s-left',
+            help='Jump to next frame.'
+        ),
+        TRACE_BACKWARD=ADict(
+            key='s-right',
+            help='Jump to previous frame.'
+        )
+    )
+
+    @classmethod
+    def to_readable_key(cls, key):
+        key_mappings = [
+            ADict(
+                up='↑',
+                down='↓',
+                left='←',
+                right='→'
+            ),
+            ADict(
+                s='Shift',
+                c='Ctrl',
+                alt='ALT'
+            )
+        ]
+        return '+'.join(
+            reversed([
+                f'{sub_key_mappings.get(sub_key, sub_key.upper())}'
+                for sub_key, sub_key_mappings in zip(reversed(key.split('-')), key_mappings)
+            ])
+        )
+
+    @classmethod
+    def get_help(cls, event_codes):
+        return '\n'.join([
+            f'{cls.to_readable_key(cls.EVENT_KEYS[event_code].key)}: {cls.EVENT_KEYS[event_code].help}'
+            for event_code in event_codes
+        ])
+
+    @classmethod
+    def register_kb_from_event_codes(cls, executor, event_codes):
+        for event_code in event_codes:
+            if event_code in cls.EVENT_KEYS:
+                executor.register_kb(cls.EVENT_KEYS[event_code].key)(cls.get_key_binding_fn(event_code))
+
+    @classmethod
+    def get_key_binding_fn(cls, event_code):
+        def run(event):
+            return event.app.exit(event_code)
+        return run
+
+
 def show_main_menu():
     main_choices = [
         Choice(name='Look-up Frames', value='FRAMES'),
-        # Choice(name='Look-up Variables', value='VARIABLES'),
-        # Choice(name='Execute Code', value='EXEC'),
         Choice(name='Set Verbosity', value='SET_VERBOSITY'),
         Choice(name='Continue', value='RETURN'),
         Choice(name='Terminate', value='EXIT')
@@ -126,66 +210,40 @@ def search_and_show_frames(logger, verbosity):
             if index == logger.index else f'{frame_info.filename} | Line {frame_info.lineno}': index
             for index, frame_info in enumerate(frames_info)
         })
-        frame_input = inquirer.fuzzy(
+        frame_selection = inquirer.fuzzy(
             message='Select frames to jump or press function keys to inspect(Press Ctrl+H to see help.):',
             choices=list(choices.keys())
         )
-
-        @frame_input.register_kb('s-up')
-        def return_to_main_menu(event):
-            event.app.exit('RETURN')
-
-        @frame_input.register_kb('c-h')
-        def print_help(event):
-            event.app.exit('HELP')
-
-        @frame_input.register_kb('c-s')
-        def print_frame(event):
-            event.app.exit('PRINT')
-
-        @frame_input.register_kb('c-f')
-        def print_frame_with_query(event):
-            event.app.exit('SEARCH')
-
-        @frame_input.register_kb('c-v')
-        def run_inspect(event):
-            event.app.exit('VARIABLES')
-
-        @frame_input.register_kb('c-x')
-        def run_exec(event):
-            event.app.exit('EXEC')
-
-        @frame_input.register_kb('s-right')
-        def run_trace(event):
-            event.app.exit('TRACE')
-
-        @frame_input.register_kb('s-left')
-        def run_traceback(event):
-            event.app.exit('TRACEBACK')
-
-        choice = frame_input.execute()
+        event_codes = (
+            'ESCAPE',
+            'HELP',
+            'SOURCE',
+            'SEARCH',
+            'INSPECT',
+            'EXEC',
+            'TRACE_FORWARD',
+            'TRACE_BACKWARD'
+        )
+        KeyBindingRegistry.register_kb_from_event_codes(executor=frame_selection, event_codes=event_codes)
+        choice = frame_selection.execute()
         match choice:
-            case 'RETURN':
+            case 'ESCAPE':
                 break
             case 'HELP':
-                print_with_split(
-                    'Shift+↑: Return to main menu.\n'
-                    'Ctrl+S: Print source code of current frame.\n'
-                    'Ctrl+F: Search text from code of current frame.\n'
-                    'Ctrl+V: Inspect variables defined in current frame.\n'
-                    'Ctrl+X: Execute commands on current frame.\n'
-                    'Shift+→: Jump to next frame.\n'
-                    'Shift+←: Jump to previous frame.',
-                    is_system_log=True
-                )
-            case 'PRINT':
+                print_with_split(KeyBindingRegistry.get_help(event_codes), is_system_log=True)
+            case 'SOURCE':
                 frame = logger.current_frame()
                 frame_info = inspect.getframeinfo(frame)
                 print_source(frame, {frame_info.lineno: '#4DEA77'})
             case 'SEARCH':
                 frame = logger.current_frame()
                 print_source(frame, query=inquirer.text('Press query to search:').execute())
-            case 'TRACE':
+            case 'INSPECT':
+                search_and_show_variables(logger, verbosity)
+            case 'EXEC':
+                frame = logger.current_frame()
+                online_execute(frame)
+            case 'TRACE_FORWARD':
                 next_frame = logger.trace()
                 if next_frame is None:
                     print_system_log('There does not exist next frame, maybe you are already in main code.')
@@ -193,7 +251,7 @@ def search_and_show_frames(logger, verbosity):
                     frame = next_frame
                     frame_info = inspect.getframeinfo(frame)
                     print_system_log(f'Jumped to: {frame_info.filename} | Line {frame_info.lineno}')
-            case 'TRACEBACK':
+            case 'TRACE_BACKWARD':
                 prev_frame = logger.traceback()
                 if prev_frame is None:
                     print('There does not exist previous frame, maybe you are already in last stack.')
@@ -201,11 +259,6 @@ def search_and_show_frames(logger, verbosity):
                     frame = prev_frame
                     frame_info = inspect.getframeinfo(frame)
                     print_system_log(f'Jumped to: {frame_info.filename} | Line {frame_info.lineno}')
-            case 'VARIABLES':
-                search_and_show_variables(logger, verbosity)
-            case 'EXEC':
-                frame = logger.current_frame()
-                online_execute(frame)
             case _:
                 frame_index = choices[choice]
                 frame = logger.set_frame_by_index(frame_index)
@@ -217,109 +270,77 @@ def search_and_show_variables(logger, verbosity):
     frame = logger.current_frame()
     frame_info = inspect.getframeinfo(frame)
     print_system_log(f'Currently on: {frame_info.filename} | Line {frame_info.lineno}')
-    variables = get_variables_from_frame(frame)
-    choices = _get_variable_choices(variables, verbosity)
-    variable_name = None
-    selected_variable = None
+    frame_vars = get_variables_from_frame(frame)
+    choices = _get_variable_choices(frame_vars, verbosity)
+    var_name = None
+    selected_var = None
     attributes = None
     methods = None
     while True:
-        variable_input = inquirer.fuzzy(
+        var_selection = inquirer.fuzzy(
             message='Select variables to show or press function keys to inspect(Press Ctrl+H to see help.):',
             choices=list(choices.keys())
         )
-
-        @variable_input.register_kb('s-up')
-        def return_to_main_menu(event):
-            event.app.exit('RETURN')
-
-        @variable_input.register_kb('c-h')
-        def print_help(event):
-            event.app.exit('HELP')
-
-        @variable_input.register_kb('c-s')
-        def print_frame(event):
-            event.app.exit('PRINT')
-
-        @variable_input.register_kb('c-f')
-        def print_frame_with_query(event):
-            event.app.exit('SEARCH')
-
-        @variable_input.register_kb('c-t')
-        def print_attributes(event):
-            event.app.exit('PRINT-ATTRS')
-
-        @variable_input.register_kb('c-e')
-        def print_methods(event):
-            event.app.exit('PRINT-METHODS')
-
-        @variable_input.register_kb('c-x')
-        def run_exec(event):
-            event.app.exit('EXEC')
-
-        @variable_input.register_kb('s-right')
-        def run_trace(event):
-            event.app.exit('TRACE')
-
-        @variable_input.register_kb('s-left')
-        def run_traceback(event):
-            event.app.exit('TRACEBACK')
-
-        choice = variable_input.execute()
+        event_codes = (
+            'ESCAPE',
+            'HELP',
+            'SOURCE',
+            'SEARCH',
+            'EXEC',
+            'ATTRIBUTES',
+            'METHODS',
+            'TRACE_FORWARD',
+            'TRACE_BACKWARD'
+        )
+        KeyBindingRegistry.register_kb_from_event_codes(executor=var_selection, event_codes=event_codes)
+        choice = var_selection.execute()
         match choice:
-            case 'RETURN':
+            case 'ESCAPE':
                 break
             case 'HELP':
-                print_with_split(
-                    'Shift+↑: Return to previous menu.\n'
-                    'Ctrl+S: Print source code of current frame.\n'
-                    'Ctrl+F: Search text from code of current frame.\n'
-                    'Ctrl+T: Print attribute list of selected variable.\n'
-                    'Ctrl+E: Print method list of selected object.\n'
-                    'Ctrl+X: Execute commands on current frame.\n\n'
-                    'Shift+→: Jump to next frame.\n'
-                    'Shift+←: Jump to previous frame.',
-                    is_system_log=True
-                )
-            case 'PRINT':
+                print_with_split(KeyBindingRegistry.get_help(event_codes), is_system_log=True)
+            case 'SOURCE':
                 if any(
                     [
-                        inspect.ismodule(selected_variable),
-                        inspect.isclass(selected_variable),
-                        inspect.ismethod(selected_variable),
-                        inspect.isfunction(selected_variable),
-                        inspect.istraceback(selected_variable),
-                        inspect.isframe(selected_variable)
+                        inspect.ismodule(selected_var),
+                        inspect.isclass(selected_var),
+                        inspect.ismethod(selected_var),
+                        inspect.isfunction(selected_var),
+                        inspect.istraceback(selected_var),
+                        inspect.isframe(selected_var)
                     ]
                 ):
-                    print_source(selected_variable)
+                    print_source(selected_var)
                 else:
-                    print_system_log(f'There does not exist source code of variable "{variable_name}".')
+                    print_system_log(f'There does not exist source code of variable "{var_name}".')
             case 'SEARCH':
                 if any(
                     [
-                        inspect.ismodule(selected_variable),
-                        inspect.isclass(selected_variable),
-                        inspect.ismethod(selected_variable),
-                        inspect.isfunction(selected_variable),
-                        inspect.istraceback(selected_variable),
-                        inspect.isframe(selected_variable)
+                        inspect.ismodule(selected_var),
+                        inspect.isclass(selected_var),
+                        inspect.ismethod(selected_var),
+                        inspect.isfunction(selected_var),
+                        inspect.istraceback(selected_var),
+                        inspect.isframe(selected_var)
                     ]
                 ):
-                    print_source(selected_variable, query=inquirer.text('Press query to search:').execute())
+                    print_source(selected_var, query=inquirer.text('Press query to search:').execute())
                 else:
-                    print_system_log(f'There does not exist source code of variable "{variable_name}".')
-            case 'PRINT-ATTRS':
+                    print_system_log(f'There does not exist source code of variable "{var_name}".')
+            case 'EXEC':
+                frame = logger.current_frame()
+                online_execute(frame)
+            case 'ATTRIBUTES':
                 if attributes:
                     print(attributes.to_xyz())
                 else:
-                    print_system_log(f'There does not exist any attributes in variable "{variable_name}".')
-            case 'PRINT-METHODS':
+                    print_system_log(f'There does not exist any attribute in variable "{var_name}".')
+            case 'METHODS':
                 if methods:
                     print(methods.to_xyz())
                 else:
-                    print_system_log(f'There does not exist any method in variable "{variable_name}".')
-            case 'TRACE':
+                    print_system_log(f'There does not exist any method in variable "{var_name}".')
+            case 'TRACE_FORWARD':
                 next_frame = logger.trace()
                 if next_frame is None:
                     print_system_log('There does not exist next frame, maybe you are already in main code.')
@@ -327,10 +348,10 @@ def search_and_show_variables(logger, verbosity):
                     frame = next_frame
                     frame_info = inspect.getframeinfo(frame)
                     print_system_log(f'{frame_info.filename} | Line {frame_info.lineno}')
-                    selected_variable = None
-                    variables = get_variables_from_frame(frame)
-                    choices = _get_variable_choices(variables, verbosity)
-            case 'TRACEBACK':
+                    selected_var = None
+                    frame_vars = get_variables_from_frame(frame)
+                    choices = _get_variable_choices(frame_vars, verbosity)
+            case 'TRACE_BACKWARD':
                 prev_frame = logger.traceback()
                 if prev_frame is None:
                     print('There does not exist previous frame, maybe you are already in last stack.')
@@ -338,16 +359,16 @@ def search_and_show_variables(logger, verbosity):
                     frame = prev_frame
                     frame_info = inspect.getframeinfo(frame)
                     print_system_log(f'Jumped to: {frame_info.filename} | Line {frame_info.lineno}')
-                    selected_variable = None
-                    variables = get_variables_from_frame(frame)
-                    choices = _get_variable_choices(variables, verbosity)
+                    selected_var = None
+                    frame_vars = get_variables_from_frame(frame)
+                    choices = _get_variable_choices(frame_vars, verbosity)
             case _:
-                variable_name = choice
+                var_name = choice
                 if choice not in choices:
                     print_system_log(f'There does not exist variable: {choice}')
                 else:
-                    selected_variable = choices[choice]
-                    print_with_split(f'{selected_variable.__class__.__name__} | {selected_variable}')
+                    selected_var = choices[choice]
+                    print_with_split(f'{selected_var.__class__.__name__} | {selected_var}')
 
 
 def online_execute(frame):
@@ -357,18 +378,25 @@ def online_execute(frame):
     while True:
         line_input = inquirer.text('Enter a line to execute:')
 
-        @line_input.register_kb('up')
+        @line_input.register_kb('s-up')
         def return_to_main_menu(event):
             event.app.exit('RETURN')
+
+        @line_input.register_kb('c-h')
+        def print_help(event):
+            event.app.exit('HELP')
 
         line = line_input.execute()
 
         if line in ('exit', 'RETURN'):
             break
-        try:
-            exec(compile(line, '<string>', 'single'), global_vars, local_vars)
-        except Exception:
-            print(traceback.format_exc())
+        elif line == 'HELP':
+            print_with_split('Shift+↑: Return to previous menu.', is_system_log=True)
+        else:
+            try:
+                exec(compile(line, '<string>', 'single'), global_vars, local_vars)
+            except Exception:
+                print(traceback.format_exc())
 
 
 def trace(frame=None, enabled=True):
