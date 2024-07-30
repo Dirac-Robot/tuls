@@ -54,7 +54,9 @@ class StackLogger:
             return self.current_frame()
 
     def set_frame_by_index(self, index):
-        if 0 <= index <= len(self.frames)-1:
+        if not isinstance(index, int):
+            raise TypeError(f'index should be an integer, but {index} is not.')
+        elif 0 <= index <= len(self.frames)-1:
             self.index = index
         else:
             raise IndexError(f'index should be 0 <= index <= {len(self.frames)-1}, but {index} is not.')
