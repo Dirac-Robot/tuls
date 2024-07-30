@@ -18,7 +18,7 @@ def load_as_bytes(value):
             value = value.encode('utf-8')
     elif isinstance(value, Image):
         image_io = io.BytesIO()
-        value.save(image_io)
+        value.save(image_io, format='PNG')
         image_io.seek(0)
         value = image_io.read()
     elif isinstance(value, np.ndarray):

@@ -363,7 +363,7 @@ def search_and_show_variables(logger, verbosity):
         else:
             var_name = choice
             if choice not in choices:
-                print_system_log(f'There does not exist variable: {choice}')
+                print_system_log(f'There does not exist variable. Please check your input is valid variable name.')
             else:
                 selected_var = choices[choice]
                 print_with_split(f'{selected_var.__class__.__name__} | {selected_var}')
