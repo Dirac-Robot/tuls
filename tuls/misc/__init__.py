@@ -64,15 +64,3 @@ class Deterministic:
                 torch.cuda.set_rng_state(self.cuda_state)
                 torch.cuda.set_rng_state_all(self.cuda_state_all)
                 cudnn.deterministic = False
-
-
-@contextmanager
-def fast_write(path, mode='w'):
-    os.makedirs(os.path.dirname(path), exist_ok=True)
-    with open(path, mode) as f:
-        yield f
-
-
-def renum(iterable):
-    for i in reversed(range(len(iterable))):
-        yield i, iterable[i]

@@ -375,10 +375,13 @@ def online_execute(frame):
     local_vars = variables['locals']
     while True:
         exec_input = inquirer.text('Enter a line to execute:')
-        KeyBindingRegistry.register_kb_from_event_codes(exec_input, ('ESCAPE', 'HELP'))
+        event_codes = ('ESCAPE', 'HELP')
+        KeyBindingRegistry.register_kb_from_event_codes(exec_input, event_codes)
         command = exec_input.execute()
-        if command in ('exit', 'RETURN'):
+        if command in ('exit', 'ESCAPE'):
             break
+        elif command == 'HELP':
+            print_with_split(KeyBindingRegistry.get_help(event_codes), is_system_log=True)
         else:
             try:
                 exec(compile(command, '<string>', 'single'), global_vars, local_vars)
