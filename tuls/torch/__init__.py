@@ -42,3 +42,7 @@ def get_parameters(modules):
 def set_requires_grad(module, mode=True):
     for param in module.parameters():
         param.requires_grad_(mode)
+
+
+def tensor_to_numpy(x):
+    return x.clone().detach().cpu().numpy()
