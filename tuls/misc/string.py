@@ -19,5 +19,5 @@ def is_hex(string: str):
 
 def is_string(string: str):
     string = remove_all(string, ('e+', 'e-', 'E+', 'E-', '.'))
-    return not (string.isnumeric() or string in ('True', 'False') or is_hex(string))
+    return not (string.isnumeric() or string in ('True', 'False', 'None') or is_hex(string))
 
