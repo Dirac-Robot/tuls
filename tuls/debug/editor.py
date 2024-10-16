@@ -1,6 +1,4 @@
-import argparse
 import curses
-import sys
 
 
 class Buffer:
@@ -166,7 +164,7 @@ def main(stdscr, file_path, start_line=0):
         stdscr.move(*window.translate(cursor))
 
         k = stdscr.getkey()
-        if k == 'q':
+        if k == '\x1b':
             return
         elif k == 'KEY_LEFT':
             left(window, buffer, cursor)
