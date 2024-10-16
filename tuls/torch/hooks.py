@@ -44,4 +44,3 @@ class Hook:
                 return outputs
             return wrapper
         return decorator
-
