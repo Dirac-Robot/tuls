@@ -1,3 +1,4 @@
+import os
 import sys
 import traceback
 import inspect
@@ -9,6 +10,7 @@ from InquirerPy.base import Choice
 from InquirerPy.utils import color_print
 from beacon.adict import ADict
 
+from tuls.debug.editor import open_editor
 from tuls.debug.stack_logger import StackLogger
 
 
@@ -33,7 +35,7 @@ class KeyBindingRegistry:
             help='Return to main menu.'
         ),
         HELP=ADict(
-            key='c-k',
+            key='c-h',
             help='Print key bindings and their functions.'
         ),
         SOURCE=ADict(
@@ -51,6 +53,10 @@ class KeyBindingRegistry:
         EXEC=ADict(
             key='c-x',
             help='Execute commands on current frame.'
+        ),
+        OPEN_EDITOR=ADict(
+            key='c-e',
+            help='Open editor in current frame.'
         ),
         ATTRIBUTES=ADict(
             key='c-t',
@@ -231,6 +237,7 @@ def search_and_show_frames(logger, verbosity):
             'SEARCH',
             'INSPECT',
             'EXEC',
+            'OPEN_EDITOR',
             'TRACE_FORWARD',
             'TRACE_BACKWARD'
         )
@@ -252,6 +259,11 @@ def search_and_show_frames(logger, verbosity):
         elif choice == 'EXEC':
             frame = logger.current_frame()
             online_execute(frame)
+        elif choice == 'OPEN_EDITOR':
+            frame = logger.current_frame()
+            frame_info = inspect.getframeinfo(frame)
+            file_path = os.path.abspath(frame.f_code.co_filename)
+            open_editor(file_path=file_path, start_line=frame_info.lineno)
         elif choice == 'TRACE_FORWARD':
             next_frame = logger.trace()
             if next_frame is None:
@@ -301,6 +313,7 @@ def search_and_show_variables(logger, verbosity):
             'SOURCE',
             'SEARCH',
             'EXEC',
+            'OPEN_EDITOR',
             'ATTRIBUTES',
             'METHODS',
             'TRACE_FORWARD',
@@ -343,6 +356,10 @@ def search_and_show_variables(logger, verbosity):
         elif choice == 'EXEC':
             frame = logger.current_frame()
             online_execute(frame)
+        elif choice == 'OPEN_EDITOR':
+            frame = logger.current_frame()
+            file_path = os.path.abspath(frame.f_code.co_filename)
+            open_editor(file_path)
         elif choice == 'ATTRIBUTES':
             if attributes:
                 print(attributes.to_xyz())
