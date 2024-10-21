@@ -149,8 +149,8 @@ def main(stdscr, file_path, start_line=0):
 
     window = Window(curses.LINES-1, curses.COLS-1)
     cursor = Cursor()
-    cursor.row = start_line
-    window.row = start_line
+    cursor.row = start_line-1
+    window.row = start_line-1
     window.horizontal_scroll(cursor)
 
     while True:
@@ -185,21 +185,17 @@ def main(stdscr, file_path, start_line=0):
         elif k == '\n':
             buffer.split(cursor)
             right(window, buffer, cursor)
-        elif k in ('KEY_DC', '\x04'):
-            buffer.backspace(cursor)
-        elif k in ('KEY_BACKSPACE', '\x7f'):
-            if (cursor.row, cursor.col) > (0, 0):
-                left(window, buffer, cursor)
-                buffer.backspace(cursor)
-        else:
-            buffer.insert(cursor, k)
-            for _ in k:
-                right(window, buffer, cursor)
+        elif k == 'KEY_HOME':
+            cursor.col = 0
+            window.horizontal_scroll(cursor)
+        elif k == 'KEY_END':
+            cursor.col = len(buffer[cursor.row])
+            window.horizontal_scroll(cursor)
 
 
-def open_editor(file_path, start_line=0):
+def open_viewer(file_path, start_line=0):
     return curses.wrapper(main, file_path=file_path, start_line=start_line)
 
 
 if __name__ == '__main__':
-    curses.wrapper(main, file_path='./tuls/debug/editor.py')
+    curses.wrapper(main, file_path='./tuls/debug/viewer.py')

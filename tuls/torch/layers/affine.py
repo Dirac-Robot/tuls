@@ -8,9 +8,9 @@ class Affine(nn.Module):
     def __init__(self, num_features, bias=True):
         super().__init__()
         self.num_features = num_features
-        self.weight = nn.Parameter(torch.randn(num_features))
+        self.weight = nn.Parameter(torch.ones(num_features))
         if bias:
-            self.bias = nn.Parameter(torch.randn(num_features))
+            self.bias = nn.Parameter(torch.zeros(num_features))
         else:
             self.bias = None
 

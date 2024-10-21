@@ -10,7 +10,7 @@ from InquirerPy.base import Choice
 from InquirerPy.utils import color_print
 from beacon.adict import ADict
 
-from tuls.debug.editor import open_editor
+from tuls.debug.viewer import open_viewer
 from tuls.debug.stack_logger import StackLogger
 
 
@@ -263,7 +263,7 @@ def search_and_show_frames(logger, verbosity):
             frame = logger.current_frame()
             frame_info = inspect.getframeinfo(frame)
             file_path = os.path.abspath(frame.f_code.co_filename)
-            open_editor(file_path=file_path, start_line=frame_info.lineno)
+            open_viewer(file_path=file_path, start_line=frame_info.lineno)
         elif choice == 'TRACE_FORWARD':
             next_frame = logger.trace()
             if next_frame is None:
@@ -359,7 +359,7 @@ def search_and_show_variables(logger, verbosity):
         elif choice == 'OPEN_EDITOR':
             frame = logger.current_frame()
             file_path = os.path.abspath(frame.f_code.co_filename)
-            open_editor(file_path)
+            open_viewer(file_path)
         elif choice == 'ATTRIBUTES':
             if attributes:
                 print(attributes.to_xyz())
