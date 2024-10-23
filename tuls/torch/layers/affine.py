@@ -28,8 +28,11 @@ class Affine(nn.Module):
             else:
                 raise ValueError('There is no dimension to apply Affine module.')
         weight = weight.view(*[-1 if index == dim else 1 for index in range(len(size))])
-        bias = bias.view(*[-1 if index == dim else 1 for index in range(len(size))])
-        return weight*x+bias
+        x = weight*x
+        if self.bias is not None:
+            bias = bias.view(*[-1 if index == dim else 1 for index in range(len(size))])
+            x = x+bias
+        return x
 
 
 LayerScale = partial(Affine, bias=False)

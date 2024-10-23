@@ -5,3 +5,4 @@ torch~=2.4.0
 PyYAML~=6.0.1
 setuptools~=65.5.0
 inquirerpy~=0.3.4
+parse
