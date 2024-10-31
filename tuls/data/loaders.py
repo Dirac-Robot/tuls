@@ -50,7 +50,7 @@ class PathFinder:
         return map_fn(numbers, paths) if map_fn is not None else numbers, paths
 
     @classmethod
-    def map_by_time(cls, path_format, map_fn):
+    def map_by_time(cls, path_format, map_fn=None):
         paths = glob.glob(path_format)
         times = [os.path.getmtime(path) for path in paths]
-        return map_fn(times, paths)
+        return map_fn(times, paths) if map_fn is not None else times, paths
