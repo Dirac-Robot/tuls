@@ -1,9 +1,16 @@
 import random
+from typing import Iterable
 
 
 def renum(iterable):
     for i in reversed(range(len(iterable))):
         yield i, iterable[i]
+
+
+def ensure_sequence(item):
+    if not isinstance(item, Iterable) or isinstance(item, str):
+        return [item]
+    return item
 
 
 def sample_by_ratio(items, ratio, sort=False):
