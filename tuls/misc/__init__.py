@@ -5,6 +5,9 @@ if numpy_exists := iu.find_spec('numpy'):
     import numpy as np
 if torch_exists := iu.find_spec('torch'):
     import torch
+
+torch_cuda_available = torch_exists and torch.cuda.is_available()
+if torch_cuda_available:
     from torch.backends import cudnn
 
 
@@ -30,8 +33,9 @@ class Deterministic:
             self.numpy_state = np.random.get_state()
         if torch_exists:
             self.torch_state = torch.get_rng_state()
-            self.cuda_state = torch.cuda.get_rng_state()
-            self.cuda_state_all = torch.cuda.get_rng_state_all()
+            if torch_cuda_available:
+                self.cuda_state = torch.cuda.get_rng_state()
+                self.cuda_state_all = torch.cuda.get_rng_state_all()
 
     def fix(self):
         if self.seed is not None:
@@ -40,9 +44,10 @@ class Deterministic:
                 np.random.seed(self.seed)
             if torch_exists:
                 torch.manual_seed(self.seed)
-                torch.cuda.manual_seed(self.seed)
-                torch.cuda.manual_seed_all(self.seed)
-                cudnn.deterministic = True
+                if torch_cuda_available:
+                    torch.cuda.manual_seed(self.seed)
+                    torch.cuda.manual_seed_all(self.seed)
+                    cudnn.deterministic = True
 
     def apply(self):
         self.save_state()
@@ -59,6 +64,7 @@ class Deterministic:
                 np.random.set_state(self.numpy_state)
             if torch_exists:
                 torch.set_rng_state(self.torch_state)
-                torch.cuda.set_rng_state(self.cuda_state)
-                torch.cuda.set_rng_state_all(self.cuda_state_all)
-                cudnn.deterministic = False
+                if torch_cuda_available:
+                    torch.cuda.set_rng_state(self.cuda_state)
+                    torch.cuda.set_rng_state_all(self.cuda_state_all)
+                    cudnn.deterministic = False
